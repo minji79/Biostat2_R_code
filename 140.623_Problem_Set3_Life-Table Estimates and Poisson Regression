@@ -1,0 +1,107 @@
+###################################
+######### problem set 3 ###########
+###################################
+
+###################################
+###  1.	Life-Table Analysis    ####
+###################################
+
+########## b #########
+
+# setting the environment
+library(tidyverse)
+binData = read_csv("binlymph.csv")
+print(binData)
+summary(binData)
+
+# calculation of total time of exposure (=total person time, person-days)
+total_pt <- sum(binData$P_Days)
+total_pt
+
+#plot of S(t) –vs.- mid_days for each group
+qplot(x=mid_days, y=Survival,
+      col=factor(stage, labels=c("Stage 3", "Stage 4")),
+      data=binData) + labs(col="Cancer Stage")
+
+######### c #########
+
+# Rename variables for simplicity : 
+  # D is the number of deaths, 
+  # P_Days is the person-days accumulated in the bin
+  # mid_days is the midpoint of time bin.
+
+binData = binData %>%
+  mutate(t=mid_days) %>%
+  mutate(N = P_Days)
+
+######### d, e, f, g #########
+# poisson modeling - fit the model 
+
+# Generate time terms, centered and spline:
+binData = binData %>%
+  mutate(t60 = t-60) %>%
+  mutate(t60sp = ifelse(t > 60, t-60, 0))
+
+# Model A: stage
+modelA = glm(D ~ stage, offset=log(N), family=poisson(link="log"), data=binData)
+summary(modelA)
+
+modelA$coefficients; confint.default(modelA) ## coefficients
+exp(modelA$coefficients); exp(confint.default(modelA)) ## IRR
+
+# Model B: stage + t-60
+modelB = glm(D ~ stage + t60, offset=log(N),
+             family=poisson(link="log"), data=binData)
+summary(modelB)
+modelB$coefficients; confint.default(modelB) ## coefficients
+exp(modelB$coefficients); exp(confint.default(modelB)) ## IRR
+
+# Model C: stage + t-60 + (t-60)^+
+modelC = glm(D ~ stage + t60 + t60sp, offset=log(N),
+             family=poisson(link="log"), data=binData)
+summary(modelC)
+modelC$coefficients; confint.default(modelC) ## coefficients
+exp(modelC$coefficients); exp(confint.default(modelC)) ## IRR
+
+# Model D: stage + t-60 + (t-60)^+ + stage*(t-60) + stage*(t-60)^+
+modelD = glm(D ~ stage + t60 + t60sp + stage:t60 + stage:t60sp, offset=log(N), 
+             family=poisson(link="log"), data=binData)
+summary(modelD)
+modelD$coefficients; confint.default(modelD) ## coefficients
+exp(modelD$coefficients); exp(confint.default(modelD)) ## IRR
+
+######### h #########
+# using AIC, identify the “best” prediction
+AIC(modelA, modelB, modelC, modelD)
+
+###################################
+### 2.  Kaplan-Meier Analysis  ####
+###################################
+
+######### i #########
+lymphData = read_csv("lymphoma.csv")
+head(lymphData)
+
+library(survival)
+
+lymphData$SurvObj = with(lymphData, Surv(days, died == 1))
+
+km.stage = survfit(SurvObj ~ stage, data = lymphData,
+                   type="kaplan-meier", conf.type="log-log")
+summary(km.stage)
+
+# Plot the K-M curves against time
+plot(km.stage, col=c("blue","red"),
+     main="Kaplan-Meier survival estimates by cancer stage",
+     ylab="S(t)", xlab="time" )
+legend("bottomleft", c("Stage 3", "Stage 4"),
+       col=c("blue", "red"), lty=1)
+
+######### k #########
+#Carry out a log-rank
+survdiff(SurvObj ~ stage, data=lymphData)
+
+######### l #########
+# Fit a Cox proportional hazards model 
+model1 = coxph(SurvObj ~ stage, data = lymphData, ties="breslow")
+summary(model1)
