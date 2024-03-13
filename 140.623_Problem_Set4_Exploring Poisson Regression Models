@@ -1,0 +1,232 @@
+########## problem set 4 ##########
+
+# Explore the data using descriptive statistics for the 641 time bins
+library(tidyverse)
+framData = read_csv("FraminghamPS4bin.csv")
+summary(framData)
+view(framData)
+
+framData %>% as.data.frame()
+
+# check summaries of the key variables in the analysis:
+## explore the data for potential prediction variable
+
+## tbin
+table(framData$tbin, useNA="always")
+prop.table(table(framData$tbin))
+summary(framData$tbin)
+framData %>% count(tbin)
+
+## list the data showing the population size and number of deaths in each of the groups
+## stratified by gender
+framData %>% 
+  dplyr::select(tbin, gender) %>% 
+  group_by(tbin) %>% 
+  count(framData$gender) %>%
+  mutate(prop = n / sum(n)) %>%
+  print (n=Inf) 
+
+table(framData$geander, useNA="always")
+prop.table(table(framData$gender))
+summary(framData$gender)
+
+## stratified by cursmoke
+framData %>% 
+  dplyr::select(tbin, cursmoke) %>% 
+  group_by(tbin) %>% 
+  count(framData$cursmoke) %>%
+  mutate(prop = n / sum(n)) %>%
+  print (n=Inf)
+
+table(framData$cursmoke, useNA="always")
+prop.table(table(framData$cursmoke))
+summary(framData$cursmoke)
+
+## stratified by diabetes
+framData %>% 
+  dplyr::select(tbin, diabetes) %>% 
+  group_by(tbin) %>% 
+  count(framData$diabetes) %>%
+  mutate(prop = n / sum(n)) %>%
+  print (n=Inf)
+
+table(framData$diabetes, useNA="always")
+prop.table(table(framData$diabetes))
+summary(framData$diabetes)
+
+## stratified by bpmeds
+framData %>% 
+  dplyr::select(tbin, bpmeds) %>% 
+  group_by(tbin) %>% 
+  count(framData$bpmeds) %>%
+  mutate(prop = n / sum(n)) %>%
+  print (n=Inf)
+
+table(framData$bpmeds, useNA="always")
+prop.table(table(framData$bpmeds))
+summary(framData$bpmeds)
+
+## stratified by bmicat
+framData %>% 
+  dplyr::select(tbin, bmicat) %>% 
+  group_by(tbin) %>% 
+  count(framData$bmicat) %>%
+  mutate(prop = n / sum(n)) %>%
+  print (n=Inf)
+
+table(framData$bmicat, useNA="always")
+prop.table(table(framData$bmicat))
+summary(framData$bmicat)
+
+## stratified by agecat
+framData %>% 
+  dplyr::select(tbin, agecat) %>% 
+  group_by(tbin) %>% 
+  count(framData$agecat) %>%
+  mutate(prop = n / sum(n)) %>%
+  print (n=Inf)
+
+table(framData$agecat, useNA="always")
+prop.table(table(framData$agecat))
+summary(framData$agecat)
+
+##########################
+### explore several Poisson regression models
+
+# model A - incl.  every var
+modelA = glm(D ~ gender + cursmoke + diabetes + bpmeds + bmicat + agecat, offset=log(Y),  data=framData, family=poisson(link="log"))
+summary(modelA)
+modelA$coefficients; confint.default(modelA) 
+exp(modelA$coefficients); exp(confint.default(modelA))
+
+
+# model B - excl. not significant var in univariable poisson model
+modelB = glm(D ~ gender + diabetes + bpmeds, offset=log(Y),  data=framData, family=poisson(link="log"))
+summary(modelB)
+modelB$coefficients; confint.default(modelB) 
+exp(modelB$coefficients); exp(confint.default(modelB))
+
+
+# model C - excl. not significant var in univariable poisson model
+modelC = glm(D ~ cursmoke + bmicat + agecat, offset=log(Y),  data=framData, family=poisson(link="log"))
+summary(modelC)
+modelC$coefficients; confint.default(modelC) 
+exp(modelC$coefficients); exp(confint.default(modelC))
+
+
+## compare AIC
+AIC(model1)
+AIC(model2)
+AIC(model3)
+AIC(model4)
+AIC(model5)
+AIC(model6)
+
+AIC(modelA)
+AIC(modelB)
+AIC(modelC)
+
+###################
+# linear combinations -lincom
+
+install.packages("multcomp")
+library(multcomp)
+names(coef(modelA))
+summary(glht(modelA, linfct = c("var a - var b = 0")))
+
+
+######################
+### checking assupmtions
+# Pearson chi-square goodness-of-fit test (like poisgof in Stata)
+X2 = sum(residuals(model1, type = "pearson")^2); X2
+df = model1$df.residual; df
+pval = 1-pchisq(X2, df); pval
+
+X2 = sum(residuals(modelA, type = "pearson")^2); X2
+df = modelA$df.residual; df
+pval = 1-pchisq(X2, df); pval
+
+
+############ correcting for overdispersion 
+# method 1: 
+
+
+
+###################
+# method 2: Negative binomial regression
+library(MASS)
+modelD = glm.nb(D ~ gender + cursmoke + diabetes + bpmeds + bmicat + agecat + offset(log(Y)), data=framData)
+summary(modelD)
+modelD$coefficients; confint.default(modelD) 
+exp(modelD$coefficients); exp(confint.default(modelD))
+
+modelE = glm.nb(D ~ cursmoke + bmicat + agecat + offset(log(Y)), data=framData)
+summary(modelE)
+modelE$coefficients; confint.default(modelE) 
+exp(modelE$coefficients); exp(confint.default(modelE))
+
+AIC(modelA)
+AIC(modelD)
+AIC(modelE)
+
+## Calculate the 2 * diff in log-likelihood for NB (modelB) compared to Poisson (modelA)
+LRTstat = 2 * (logLik(modelD) - logLik(modelA))
+df =1 
+pval = 1-pchisq(LRTstat, df)
+paste0("LRT test statistic = ", round(LRTstat,2), ", df = ", df, ", p-value =", round(pval,3))
+
+## model 1 - gender - sig
+model1 = glm.nb(D ~ gender + offset(log(Y)), data=framData)
+summary(model1)
+model1$coefficients; confint.default(model1) 
+exp(model1$coefficients); exp(confint.default(model1))
+
+AIC(model1)
+
+
+
+# model 2 - smoking - not sig
+model2 = glm.nb(D ~ cursmoke + offset(log(Y)), data=framData)
+summary(model2)
+model2$coefficients; confint.default(model2) 
+exp(model2$coefficients); exp(confint.default(model2))
+
+AIC(model2)
+
+# model 3 - diabetes - sig
+model3 = glm.nb(D ~ diabetes + offset(log(Y)), data=framData)
+summary(model3)
+model3$coefficients; confint.default(model3) 
+exp(model3$coefficients); exp(confint.default(model3))
+
+AIC(model3)
+
+# model 4 - bpmeds - sig
+model4 = glm.nb(D ~ bpmeds + offset(log(Y)), data=framData)
+summary(model4)
+model4$coefficients; confint.default(model4) 
+exp(model4$coefficients); exp(confint.default(model4))
+
+AIC(model4)
+
+# model 5 - bmicat - not sig
+model5 = glm.nb(D ~ bmicat + offset(log(Y)), data=framData)
+summary(model5)
+model5$coefficients; confint.default(model5) 
+exp(model5$coefficients); exp(confint.default(model5))
+
+AIC(model5)
+
+# model 6 - agecat - not sig
+model6 = glm.nb(D ~ agecat + offset(log(Y)), data=framData)
+summary(model6)
+model6$coefficients; confint.default(model6) 
+exp(model6$coefficients); exp(confint.default(model6))
+
+AIC(model6)
+
+## fitting on grouped data: LIfe-table curve
+library(survival)
+framData$SurvObj = with(framData, Surv(days, failure ==1))
+km.gender = survfit(SurvObj ~ gender, data = framData, type="kaplan-meier", conf.type="log-log")
+summary()
