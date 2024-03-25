@@ -1,0 +1,180 @@
+######## reference: https://r4ds.hadley.nz/eda ########
+
+####################################################################################################
+###############  Introduction
+####################################################################################################
+
+### terminology
+# 1. tidy: Once you’ve imported your data, it is a good idea to tidy it. 
+# 2. transform: Once you have tidy data, a common next step is to transform it. 
+# (Transformation includes narrowing in on observations of interest,creating new variables that are functions of existing variables)
+# 1+2 = wrangling: Together, tidying and transforming are called wrangling
+
+# 3. visualization and modeling : there are two main engines of knowledge generation.
+# 4. communication
+
+
+### install packages
+
+install.packages("tidyverse")
+library(tidyverse)
+# tidyverse loads nine packages: dplyr, forcats, ggplot2, lubridate, purrr, readr, stringr, tibble, tidyr. 
+tidyverse_update()
+
+
+install.packages(
+  c("arrow", "babynames", "curl", "duckdb", "gapminder", 
+    "ggrepel", "ggridges", "ggthemes", "hexbin", "janitor", "Lahman", 
+    "leaflet", "maps", "nycflights13", "openxlsx", "palmerpenguins", 
+    "repurrrsive", "tidymodels", "writexl")
+  )
+
+####################################################################################################
+###############   Whole game
+####################################################################################################
+
+########################################
+#   1. Data visualization
+########################################
+
+############################
+#   1.2. first step | ggplot 이용한 scatterplot
+############################
+
+# This chapter will teach you how to visualize your data using ggplot2.
+
+install.packages("tidyverse")
+library(tidyverse)
+
+library(palmerpenguins)
+library(ggthemes)
+
+# tibbles | In the tidyverse, we use special data frames called tibbles.
+
+penguins
+glimpse(penguins)
+
+### Creating a ggplot
+
+# 1. creates an empty graph 
+ggplot(data = penguins)
+
+# 2. aes() specify which variables to map to the x and y axes.
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+)
+
+# 3. we need to define a geom: the geometrical object that a plot uses to represent data 
+# adds a layer of points to your plot, which creates a scatterplot.
+
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) + 
+  geom_point()
+
+# 4. Adding aesthetics and layers
+# scaling ; 
+# When a categorical variable is mapped to an aesthetic, ggplot2 will automatically assign a unique value of the aesthetic
+
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g, color = species)
+) + 
+  geom_point()
+
+# 5. we will add a new geom as a layer on top of our point geom: geom_smooth()
+# specify that we want to draw the line of best fit based on a linear model with method = "lm".
+# to separate lines for each of the penguin species.
+
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g, color = species)
+) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# 6. we should specify color = species for geom_point() only.
+# Since we want points to be colored based on species but don’t want the lines to be separated out for them, 
+
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) + 
+  geom_point(mapping = aes(color = species)) +
+  geom_smooth(method = "lm")
+
+# 7.  in addition to color, we can also map species to the shape aesthetic.
+
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) + 
+  geom_point(mapping = aes(color = species, shape = species)) +
+  geom_smooth(method = "lm")
+
+# 8. we can improve the labels of our plot using the labs()
+
+ggplot(
+    data = penguins,
+    mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) + 
+  geom_point(mapping = aes(color = species, shape = species)) +
+  geom_smooth(method = "lm") + 
+  labs(
+    title = "Body mass and flipper length",
+    subtitle = "Dimensions for Adelie, Chinstrap, and Gentoo Penguins",
+    x = "Flipper length (mm)", y = "Body mass (g)",
+    color = "Species", shape = "Species"
+  ) +
+  scale_color_colorblind()
+
+############################
+#   1.3. ggplot2 calls
+############################
+
+## type 1
+
+ggplot(
+  data = penguins,
+  mapping = aes(x = flipper_length_mm, y = body_mass_g)
+) +
+  geom_point()
+
+## type 2 | Rewriting the previous plot more concisely yields:
+
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+
+## type 3 | In the future, you’ll also learn about the pipe, |>, which will allow you to create that plot with:
+
+penguins |> 
+  ggplot(aes(x = flipper_length_mm, y = body_mass_g)) + 
+  geom_point()
+
+
+############################
+#   1.4. Visualizing distributions
+############################
+
+########   1.4.1. categorical var | bar chart
+
+ggplot(penguins, aes(x = species)) + 
+  geom_bar()
+
+# then reordering the levels of that factor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
